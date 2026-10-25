@@ -1,0 +1,1 @@
+{"name": "unipipe-regression", "version": "0.0.1", "title": "Unipipe regression checks", "author": "jpo", "factorio_version": "2.1", "dependencies": ["base", "Unipipe"]}

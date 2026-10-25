@@ -9,13 +9,18 @@ Pipe = {}
     -- Normalize 2.1 filter objects into a string
 function Pipe.getFluidNameFromFilter(filter)
   if not filter then return nil end
-  local fluid = filter.fluid or filter.name
+  if type(filter) == "string" then return filter end
+
+  -- Factorio 2.1 can return LuaFluidPrototype directly. Reading an unknown
+  -- field on a LuaObject throws, so probe supported forms independently.
+  local ok, name = pcall(function() return filter.name end)
+  if ok and type(name) == "string" then return name end
+
+  local fluidOk, fluid = pcall(function() return filter.fluid end)
+  if not fluidOk or not fluid then return nil end
   if type(fluid) == "string" then return fluid end
-  if type(fluid) == "table" or type(fluid) == "userdata" then
-    local ok, fluidName = pcall(function() return fluid.name end)
-    if ok and type(fluidName) == "string" then return fluidName end
-  end
-  if type(filter.name) == "string" then return filter.name end
+  local nameOk, fluidName = pcall(function() return fluid.name end)
+  if nameOk and type(fluidName) == "string" then return fluidName end
   return nil
 end
 
@@ -310,7 +315,9 @@ function findConnectedUnipipes(toVisit, unipipes, visited, fluidTypes)
     local visit = table.remove(toVisit)
     local entity = visit.entity
     local fluidboxIdx = visit.fluidboxIdx
-    if not entity.valid then goto continue end
+    -- A recipe change can remove fluidboxes while this deferred scan is queued.
+    if not entity.valid or not fluidboxIdx or fluidboxIdx < 1 or
+        fluidboxIdx > entity.fluids_count then goto continue end
 
     local key = entity.unit_number .. '/' .. fluidboxIdx
     if visited[key] then
